@@ -47,6 +47,8 @@ void scoring::Hook_Shutdown()
     this->tm->stop();
     delete this->tm;
     this->SetConfig("server", this->GetConfig("server", this->GetServer()));
+    foreach (Huggle::WikiSite *sx, hcfg->Projects)
+        this->SetConfig(sx->Name + "_amp", QString::number(this->GetAmplifier(sx)));
 }
 
 void scoring::Hook_MainWindowOnLoad(void *window)
@@ -95,6 +97,11 @@ void scoring::Hook_GoodEdit(void *edit)
 
 }
 
+double scoring::GetAmplifier(Huggle::WikiSite *site)
+{
+    return this->GetConfig(site->Name + "_amp", "200").toDouble();
+}
+
 void scoring::Refresh()
 {
     foreach (void* edit, this->Edits.keys())
@@ -138,9 +145,7 @@ void scoring::Refresh()
                     continue;
                 }
                 // Math
-                long probability_yes = (long)(probability["true"].toDouble() * 1000);
-                long probability_no = (long)(probability["false"].toDouble() * 1000) * -1;
-                long final = probability_yes + probability_no;
+                long final = (long)((probability["true"].toDouble() - probability["false"].toDouble()) * this->GetAmplifier(wiki_edit->GetSite()));
                 wiki_edit->Score += final;
                 if (!wiki_edit->MetaLabels.contains("ORES Score"))
                 {

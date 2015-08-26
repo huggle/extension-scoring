@@ -55,6 +55,7 @@ class scoring : public QDeclarativeItem, public Huggle::iExtension
         bool RequestCore() { return true; }
         bool RequestNetwork() { return true; }
         bool RequestConfiguration() { return true; }
+        double GetAmplifier(Huggle::WikiSite *site);
     public slots:
         void Refresh();
     private:
