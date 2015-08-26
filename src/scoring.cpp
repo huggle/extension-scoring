@@ -11,6 +11,7 @@
 #include "scoring.hpp"
 #include <wikiedit.hpp>
 //#include <wikiuser.hpp>
+#include <wikisite.hpp>
 #include <wikipage.hpp>
 #include <configuration.hpp>
 #include <querypool.hpp>
@@ -50,7 +51,13 @@ void scoring::Hook_Shutdown()
 
 void scoring::Hook_MainWindowOnLoad(void *window)
 {
-
+    foreach (Huggle::WikiSite *x, hcfg->Projects)
+    {
+        if (x->Name != "enwiki")
+        {
+            Huggle::Syslog::HuggleLogs->WarningLog(x->Name + " is not supported by scoring extension, unexpected behaviour may happen");
+        }
+    }
 }
 
 bool scoring::Hook_EditIsReady(void *edit)
@@ -63,19 +70,24 @@ bool scoring::Hook_EditIsReady(void *edit)
 
 bool scoring::Hook_EditBeforeScore(void *edit)
 {
+    return true;
+}
+
+void scoring::Hook_EditBeforePostProcessing(void *edit)
+{
     if (this->Edits.contains(edit))
     {
         HUGGLE_EXDEBUG1("edit " + QString::number((intptr_t) edit, 16) + " is already in list");
-        return true;
+        return;
     }
     Huggle::WikiEdit *WikiEdit = (Huggle::WikiEdit*)edit;
     WikiEdit->IncRef();
     Huggle::Collectable_SmartPtr<Huggle::WebserverQuery> query = new Huggle::WebserverQuery();
-    query->URL = this->GetServer() + QString::number(WikiEdit->RevID) + "/";
+    query->URL = this->GetServer() + WikiEdit->GetSite()->Name + "/reverted/" + QString::number(WikiEdit->RevID) + "/";
     query->Process();
     Huggle::QueryPool::HugglePool->AppendQuery(query);
     this->Edits.insert(edit, query);
-    return true;
+    return;
 }
 
 void scoring::Hook_GoodEdit(void *edit)
@@ -97,7 +109,44 @@ void scoring::Refresh()
                 Huggle::Syslog::HuggleLogs->ErrorLog("Scoring failed for edit " + wiki_edit->Page->PageName + ": " + request->GetFailureReason());
             } else
             {
-
+                //HUGGLE_EXDEBUG(request->Result->Data, 3);
+                QJsonDocument d = QJsonDocument::fromJson(request->Result->Data.toUtf8());
+                QJsonObject score = d.object();
+                QString revid = QString::number(wiki_edit->RevID);
+                if (!score.contains(revid))
+                {
+                    HUGGLE_EXDEBUG1("Revision score for edit " + revid + " did not contain the information for this revision, source code was: " + request->Result->Data);
+                    continue;
+                }
+                QJsonObject rev = score[revid].toObject();
+                if (!rev.contains("prediction"))
+                {
+                    HUGGLE_EXDEBUG1("Revision didn't contain prediction for " + revid);
+                    continue;
+                }
+                if (!rev.contains("probability"))
+                {
+                    HUGGLE_EXDEBUG1("Revision didn't contain probability for " + revid);
+                    continue;
+                }
+                // We don't need this for anything TBH
+                //bool prediction = rev["prediction"].toBool();
+                QJsonObject probability = rev["probability"].toObject();
+                if (!probability.contains("false") || !probability.contains("true"))
+                {
+                    HUGGLE_EXDEBUG1("Probability information was invalid for " + revid);
+                    continue;
+                }
+                // Math
+                long probability_yes = (long)(probability["true"].toDouble() * 1000);
+                long probability_no = (long)(probability["false"].toDouble() * 1000) * -1;
+                long final = probability_yes + probability_no;
+                wiki_edit->Score += final;
+                if (!wiki_edit->MetaLabels.contains("ORES Score"))
+                {
+                    // Insert meta
+                    wiki_edit->MetaLabels.insert("ORES Score", QString::number(final));
+                }
             }
         }
     }
@@ -105,7 +154,7 @@ void scoring::Refresh()
 
 QString scoring::GetServer()
 {
-    return this->GetConfig("server",  "https://ores.wmflabs.org/scores/");
+    return this->GetConfig("server",  "http://ores.wmflabs.org/scores/");
 }
 
 #if QT_VERSION < 0x050000

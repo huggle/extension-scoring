@@ -50,6 +50,7 @@ class scoring : public QDeclarativeItem, public Huggle::iExtension
         void Hook_MainWindowOnLoad(void *window);
         bool Hook_EditIsReady(void *edit);
         bool Hook_EditBeforeScore(void *edit);
+        void Hook_EditBeforePostProcessing(void *edit);
         void Hook_GoodEdit(void *edit);
         bool RequestCore() { return true; }
         bool RequestNetwork() { return true; }
