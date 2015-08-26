@@ -13,8 +13,13 @@
 
 #define HUGGLE_EXTENSION
 #include <iextension.hpp>
+#include <collectable_smartptr.hpp>
+#include <webserverquery.hpp>
 #include <QAction>
 #include <QDeclarativeItem>
+#include <QHash>
+
+class QTimer;
 
 namespace Huggle
 {
@@ -33,6 +38,7 @@ class scoring : public QDeclarativeItem, public Huggle::iExtension
     Q_INTERFACES(Huggle::iExtension)
     public:
         scoring();
+        ~scoring();
         bool Register();
         bool IsWorking();
         QString GetExtensionName() { return "Scoring Helper"; }
@@ -41,9 +47,20 @@ class scoring : public QDeclarativeItem, public Huggle::iExtension
         QString GetExtensionVersion() { return "1.0.0"; }
         //bool Hook_EditBeforeScore(void *edit);
         void Hook_Shutdown();
+        void Hook_MainWindowOnLoad(void *window);
+        bool Hook_EditIsReady(void *edit);
+        bool Hook_EditBeforeScore(void *edit);
+        void Hook_GoodEdit(void *edit);
         bool RequestCore() { return true; }
         bool RequestNetwork() { return true; }
         bool RequestConfiguration() { return true; }
+    public slots:
+        void Refresh();
+    private:
+        QString GetServer();
+        QTimer *tm;
+        QAction *System;
+        QHash<void*, Huggle::Collectable_SmartPtr<Huggle::WebserverQuery>> Edits;
 };
 
 QML_DECLARE_TYPE(scoring)
