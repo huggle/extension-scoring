@@ -19,6 +19,8 @@
 #include <syslog.hpp>
 #include <QTimer>
 
+#define SCORING_TIMEOUT this->GetConfig("timeout", "7")
+
 scoring::scoring()
 {
     this->tm = new QTimer();
@@ -28,7 +30,8 @@ scoring::scoring()
 
 scoring::~scoring()
 {
-
+    this->tm->stop();
+    delete this->tm;
 }
 
 bool scoring::Register()
@@ -44,11 +47,10 @@ bool scoring::IsWorking()
 
 void scoring::Hook_Shutdown()
 {
-    this->tm->stop();
-    delete this->tm;
     this->SetConfig("server", this->GetConfig("server", this->GetServer()));
     foreach (Huggle::WikiSite *sx, hcfg->Projects)
         this->SetConfig(sx->Name + "_amp", QString::number(this->GetAmplifier(sx)));
+    this->SetConfig("timeout", SCORING_TIMEOUT);
 }
 
 void scoring::Hook_MainWindowOnLoad(void *window)
@@ -85,6 +87,7 @@ void scoring::Hook_EditBeforePostProcessing(void *edit)
     Huggle::WikiEdit *WikiEdit = (Huggle::WikiEdit*)edit;
     WikiEdit->IncRef();
     Huggle::Collectable_SmartPtr<Huggle::WebserverQuery> query = new Huggle::WebserverQuery();
+    query->Timeout = SCORING_TIMEOUT.toInt();
     query->URL = this->GetServer() + WikiEdit->GetSite()->Name + "/reverted/" + QString::number(WikiEdit->RevID) + "/";
     query->Process();
     Huggle::QueryPool::HugglePool->AppendQuery(query);
