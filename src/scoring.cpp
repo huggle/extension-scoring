@@ -16,6 +16,7 @@
 #include <configuration.hpp>
 #include <querypool.hpp>
 #include <QJsonDocument>
+#include <QJsonObject>
 #include <syslog.hpp>
 #include <QTimer>
 
