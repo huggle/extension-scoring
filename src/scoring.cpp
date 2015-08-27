@@ -85,6 +85,8 @@ void scoring::Hook_EditBeforePostProcessing(void *edit)
         return;
     }
     Huggle::WikiEdit *WikiEdit = (Huggle::WikiEdit*)edit;
+    if (WikiEdit->RevID == WIKI_UNKNOWN_REVID)
+        return;
     WikiEdit->IncRef();
     Huggle::Collectable_SmartPtr<Huggle::WebserverQuery> query = new Huggle::WebserverQuery();
     query->Timeout = SCORING_TIMEOUT.toInt();
@@ -114,6 +116,7 @@ void scoring::Refresh()
         if (request->IsProcessed())
         {
             this->Edits.remove(edit);
+            wiki_edit->DecRef();
             if (request->IsFailed())
             {
                 Huggle::Syslog::HuggleLogs->ErrorLog("Scoring failed for edit " + wiki_edit->Page->PageName + ": " + request->GetFailureReason());
