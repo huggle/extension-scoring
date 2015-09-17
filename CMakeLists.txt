@@ -1,6 +1,6 @@
 # This is a build file for Huggle (used with cmake)
 # You will need to update it by hand!
-cmake_minimum_required (VERSION 2.8.9)
+cmake_minimum_required (VERSION 2.8.7)
 PROJECT(huggle_scoring)
 #  cmake <folder> -DQT5_BUILD=true
 option(QT5_BUILD "Build huggle using the Qt5 framework" FALSE)
