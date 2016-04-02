@@ -166,7 +166,7 @@ void scoring::Refresh()
 
 QString scoring::GetServer()
 {
-    return this->GetConfig("server",  "http://ores.wmflabs.org/scores/");
+    return this->GetConfig("server",  "https://ores.wmflabs.org/scores/");
 }
 
 #if QT_VERSION < 0x050000
