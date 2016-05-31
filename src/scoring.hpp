@@ -59,7 +59,10 @@ class scoring : public QDeclarativeItem, public Huggle::iExtension
     public slots:
         void Refresh();
     private:
-        QString GetServer();
+        QString GetServer(Huggle::WikiSite *w);
+        QHash<Huggle::WikiSite*, QString> server_url;
+        QHash<Huggle::WikiSite*, bool> enabled;
+        QHash<Huggle::WikiSite*, double> amplifiers;
         QTimer *tm;
         QAction *System;
         QHash<void*, Huggle::Collectable_SmartPtr<Huggle::WebserverQuery>> Edits;

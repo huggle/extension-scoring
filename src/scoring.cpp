@@ -15,6 +15,7 @@
 #include <wikipage.hpp>
 #include <configuration.hpp>
 #include <querypool.hpp>
+#include <generic.hpp>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <syslog.hpp>
@@ -48,19 +49,26 @@ bool scoring::IsWorking()
 
 void scoring::Hook_Shutdown()
 {
-    this->SetConfig("server", this->GetConfig("server", this->GetServer()));
-    foreach (Huggle::WikiSite *sx, hcfg->Projects)
-        this->SetConfig(sx->Name + "_amp", QString::number(this->GetAmplifier(sx)));
     this->SetConfig("timeout", SCORING_TIMEOUT);
 }
 
 void scoring::Hook_MainWindowOnLoad(void *window)
 {
+    // Let's get the configuration
     foreach (Huggle::WikiSite *x, hcfg->Projects)
     {
-        if (x->Name != "enwiki")
+        if (!Huggle::Generic::SafeBool(x->GetProjectConfig()->GetConfig("ores-supported", "false")))
         {
-            Huggle::Syslog::HuggleLogs->WarningLog(x->Name + " is not supported by scoring extension, unexpected behaviour may happen");
+            Huggle::Syslog::HuggleLogs->WarningLog(x->Name + " is not supported by scoring extension");
+            this->enabled.insert(x, false);
+        } else if (!Huggle::Generic::SafeBool(x->GetProjectConfig()->GetConfig("ores-enabled", "false")))
+        {
+            this->enabled.insert(x, false);
+        } else
+        {
+            this->enabled.insert(x, true);
+            this->amplifiers.insert(x, x->GetProjectConfig()->GetConfig("ores-amplifier", "200").toDouble());
+            this->server_url.insert(x, x->GetProjectConfig()->GetConfig("ores-url", "https://ores.wmflabs.org/scores/"));
         }
     }
 }
@@ -91,7 +99,7 @@ void scoring::Hook_EditBeforePostProcessing(void *edit)
     WikiEdit->IncRef();
     Huggle::Collectable_SmartPtr<Huggle::WebserverQuery> query = new Huggle::WebserverQuery();
     query->Timeout = SCORING_TIMEOUT.toInt();
-    query->URL = this->GetServer() + WikiEdit->GetSite()->Name + "/reverted/" + QString::number(WikiEdit->RevID) + "/";
+    query->URL = this->GetServer(WikiEdit->GetSite()) + WikiEdit->GetSite()->Name + "/reverted/" + QString::number(WikiEdit->RevID) + "/";
     query->Process();
     Huggle::QueryPool::HugglePool->AppendQuery(query);
     this->Edits.insert(edit, query);
@@ -105,7 +113,9 @@ void scoring::Hook_GoodEdit(void *edit)
 
 double scoring::GetAmplifier(Huggle::WikiSite *site)
 {
-    return this->GetConfig(site->Name + "_amp", "200").toDouble();
+    if (!this->amplifiers.contains(site))
+        return 200;
+    return this->amplifiers[site];
 }
 
 void scoring::Refresh()
@@ -164,9 +174,13 @@ void scoring::Refresh()
     }
 }
 
-QString scoring::GetServer()
+QString scoring::GetServer(Huggle::WikiSite *w)
 {
-    return this->GetConfig("server",  "https://ores.wmflabs.org/scores/");
+    if (!this->server_url.contains(w))
+        return "";
+
+    // Get the cached project url
+    return this->server_url[w];
 }
 
 #if QT_VERSION < 0x050000
