@@ -94,6 +94,8 @@ void scoring::Hook_EditBeforePostProcessing(void *edit)
         return;
     }
     Huggle::WikiEdit *WikiEdit = (Huggle::WikiEdit*)edit;
+    if (!this->enabled[WikiEdit->GetSite()])
+        return;
     if (WikiEdit->RevID == WIKI_UNKNOWN_REVID)
         return;
     WikiEdit->IncRef();
