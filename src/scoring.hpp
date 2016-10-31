@@ -16,7 +16,6 @@
 #include <collectable_smartptr.hpp>
 #include <webserverquery.hpp>
 #include <QAction>
-#include <QDeclarativeItem>
 #include <QHash>
 
 class QTimer;
@@ -29,7 +28,7 @@ namespace Huggle
     class Query;
 }
 
-class scoring : public QDeclarativeItem, public Huggle::iExtension
+class scoring : public QObject, public Huggle::iExtension
 {
     Q_OBJECT
 #if QT_VERSION >= 0x050000
@@ -67,7 +66,5 @@ class scoring : public QDeclarativeItem, public Huggle::iExtension
         QAction *System;
         QHash<void*, Huggle::Collectable_SmartPtr<Huggle::WebserverQuery>> Edits;
 };
-
-QML_DECLARE_TYPE(scoring)
 
 #endif // SCORING_HPP
