@@ -68,7 +68,7 @@ void scoring::Hook_MainWindowOnLoad(void *window)
         {
             this->enabled.insert(x, true);
             this->amplifiers.insert(x, x->GetProjectConfig()->GetConfig("ores-amplifier", "200").toDouble());
-            this->server_url.insert(x, x->GetProjectConfig()->GetConfig("ores-url", "https://ores.wmflabs.org/scores/"));
+            this->server_url.insert(x, x->GetProjectConfig()->GetConfig("ores-url", "https://ores.wikimedia.org/scores/"));
         }
     }
 }
@@ -101,7 +101,7 @@ void scoring::Hook_EditBeforePostProcessing(void *edit)
     WikiEdit->IncRef();
     Huggle::Collectable_SmartPtr<Huggle::WebserverQuery> query = new Huggle::WebserverQuery();
     query->Timeout = SCORING_TIMEOUT.toInt();
-    query->URL = this->GetServer(WikiEdit->GetSite()) + WikiEdit->GetSite()->Name + "/reverted/" + QString::number(WikiEdit->RevID) + "/";
+    query->URL = this->GetServer(WikiEdit->GetSite()) + WikiEdit->GetSite()->Name + "/damaging/" + QString::number(WikiEdit->RevID) + "/";
     query->Process();
     Huggle::QueryPool::HugglePool->AppendQuery(query);
     this->Edits.insert(edit, query);

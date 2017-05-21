@@ -42,7 +42,7 @@ class scoring : public QObject, public Huggle::iExtension
         bool IsWorking();
         QString GetExtensionName() { return "Scoring Helper"; }
         QString GetExtensionAuthor() { return "Petr Bena"; }
-        QString GetExtensionDescription() { return "Provides interface to external revision scoring mechanism on WMF labs"; }
+        QString GetExtensionDescription() { return "Interface to ORES"; }
         QString GetExtensionVersion() { return "1.0.0"; }
         //bool Hook_EditBeforeScore(void *edit);
         void Hook_Shutdown();
