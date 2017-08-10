@@ -188,7 +188,6 @@ void scoring::Refresh()
                         continue;
                 } else
                 {
-                    HUGGLE_EXDEBUG1("damaging");
                     if (!compute_scores(&final, revision_data["damaging"].toObject(), wiki_edit.GetPtr()))
                         continue;
                 }
