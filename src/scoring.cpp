@@ -68,7 +68,7 @@ void scoring::Hook_MainWindowOnLoad(void *window)
         {
             this->enabled.insert(x, true);
             this->amplifiers.insert(x, x->GetProjectConfig()->GetConfig("ores-amplifier", "200").toDouble());
-            this->server_url.insert(x, x->GetProjectConfig()->GetConfig("ores-url", "https://ores.wikimedia.org/scores/"));
+            this->server_url.insert(x, x->GetProjectConfig()->GetConfig("ores-urlv3", "https://ores.wikimedia.org/"));
         }
     }
 }
@@ -101,7 +101,7 @@ void scoring::Hook_EditBeforePostProcessing(void *edit)
     WikiEdit->IncRef();
     Huggle::Collectable_SmartPtr<Huggle::WebserverQuery> query = new Huggle::WebserverQuery();
     query->Timeout = SCORING_TIMEOUT.toInt();
-    query->URL = this->GetServer(WikiEdit->GetSite()) + WikiEdit->GetSite()->Name + "/damaging/" + QString::number(WikiEdit->RevID) + "/";
+    query->URL = this->GetServer(WikiEdit->GetSite()) + WikiEdit->GetSite()->Name + "?revids=" + QString::number(WikiEdit->RevID);
     query->Process();
     Huggle::QueryPool::HugglePool->AppendQuery(query);
     this->Edits.insert(edit, query);
@@ -120,6 +120,20 @@ double scoring::GetAmplifier(Huggle::WikiSite *site)
     return this->amplifiers[site];
 }
 
+bool scoring::compute_scores(long *final, QJsonObject score, Huggle::WikiEdit *wiki_edit)
+{
+    if (!score.contains("score") || !score["score"].toObject().contains("probability"))
+        return false;
+
+    QJsonObject probability = score["score"].toObject()["probability"].toObject();
+    if (!probability.contains("false") || !probability.contains("true"))
+        return false;
+
+    // Math
+    *final = (long)((probability["true"].toDouble() - probability["false"].toDouble()) * this->GetAmplifier(wiki_edit->GetSite()));
+    return true;
+}
+
 void scoring::Refresh()
 {
     foreach (void* edit, this->Edits.keys())
@@ -136,35 +150,68 @@ void scoring::Refresh()
             } else
             {
                 //HUGGLE_EXDEBUG(request->Result->Data, 3);
+                QString project = wiki_edit->GetSite()->Name;
                 QJsonDocument d = QJsonDocument::fromJson(request->Result->Data.toUtf8());
                 QJsonObject score = d.object();
                 QString revid = QString::number(wiki_edit->RevID);
-                if (!score.contains(revid))
+                if (!score.contains(project))
                 {
-                    HUGGLE_EXDEBUG1("Revision score for edit " + revid + " did not contain the information for this revision, source code was: " + request->Result->Data);
+                    HUGGLE_EXDEBUG1("ORES score for edit " + revid + " on project " + wiki_edit->GetSite()->Name + " did not contain data, full source: " + request->Result->Data);
                     continue;
                 }
-                QJsonObject rev = score[revid].toObject();
-                if (!rev.contains("prediction"))
+                QJsonObject project_data = score[project].toObject();
+                if (!project_data.contains("scores"))
                 {
-                    HUGGLE_EXDEBUG1("Revision didn't contain prediction for " + revid);
+                    HUGGLE_EXDEBUG1("ORES score for edit " + revid + " on project " + wiki_edit->GetSite()->Name + " did not contain any scores");
+                    HUGGLE_EXDEBUG("Debug data for ORES score: " + request->Result->Data, 4);
                     continue;
                 }
-                if (!rev.contains("probability"))
+                QJsonObject scores = project_data["scores"].toObject();
+                if (!scores.contains(revid))
                 {
-                    HUGGLE_EXDEBUG1("Revision didn't contain probability for " + revid);
+                    HUGGLE_EXDEBUG1("ORES score for edit " + revid + " on project " + wiki_edit->GetSite()->Name + " did not contain scores for this revision");
+                    HUGGLE_EXDEBUG("Debug data for ORES score: " + request->Result->Data, 4);
                     continue;
                 }
-                // We don't need this for anything TBH
-                //bool prediction = rev["prediction"].toBool();
-                QJsonObject probability = rev["probability"].toObject();
-                if (!probability.contains("false") || !probability.contains("true"))
+                QJsonObject revision_data = scores[revid].toObject();
+                long final;
+                if (!revision_data.contains("damaging"))
                 {
-                    HUGGLE_EXDEBUG1("Probability information was invalid for " + revid);
-                    continue;
+                    HUGGLE_EXDEBUG("Revision didn't contain damaging model, falling back to reverted model " + revid, 2);
+                    if (!revision_data.contains("reverted"))
+                    {
+                        HUGGLE_EXDEBUG1("ORES score for edit " + revid + " on project " + wiki_edit->GetSite()->Name + " did not contain any useful model");
+                        HUGGLE_EXDEBUG("Debug data for ORES score: " + request->Result->Data, 4);
+                        continue;
+                    }
+                    if (!compute_scores(&final, revision_data["reverted"].toObject(), wiki_edit.GetPtr()))
+                        continue;
+                } else
+                {
+                    HUGGLE_EXDEBUG1("damaging");
+                    if (!compute_scores(&final, revision_data["damaging"].toObject(), wiki_edit.GetPtr()))
+                        continue;
                 }
-                // Math
-                long final = (long)((probability["true"].toDouble() - probability["false"].toDouble()) * this->GetAmplifier(wiki_edit->GetSite()));
+                if (revision_data.contains("goodfaith"))
+                {
+                    long g_final;
+                    if (!compute_scores(&g_final, revision_data["goodfaith"].toObject(), wiki_edit.GetPtr()))
+                    {
+                        HUGGLE_EXDEBUG("goodfaith is not available for " + revid, 3);
+                    } else
+                    {
+                        wiki_edit->GoodfaithScore += g_final;
+                        if (wiki_edit->MetaLabels.contains("ORES Goodfaith"))
+                        {
+                            // Now this is really bad - ores extension is loaded twice
+                            HUGGLE_EXDEBUG1(revid + " on project " + wiki_edit->GetSite()->Name + " already contains Goodfaith meta-data, something is seriously broken!!");
+                        } else
+                        {
+                            wiki_edit->MetaLabels.insert("ORES Goodfaith", QString::number(g_final));
+                        }
+                    }
+                }
+
                 wiki_edit->Score += final;
                 if (!wiki_edit->MetaLabels.contains("ORES Score"))
                 {
@@ -182,7 +229,7 @@ QString scoring::GetServer(Huggle::WikiSite *w)
         return "";
 
     // Get the cached project url
-    return this->server_url[w];
+    return this->server_url[w] + "v3/scores/";
 }
 
 #if QT_VERSION < 0x050000

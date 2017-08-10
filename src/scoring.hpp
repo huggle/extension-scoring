@@ -58,6 +58,7 @@ class scoring : public QObject, public Huggle::iExtension
     public slots:
         void Refresh();
     private:
+        bool compute_scores(long *final, QJsonObject score, Huggle::WikiEdit *wiki_edit);
         QString GetServer(Huggle::WikiSite *w);
         QHash<Huggle::WikiSite*, QString> server_url;
         QHash<Huggle::WikiSite*, bool> enabled;
