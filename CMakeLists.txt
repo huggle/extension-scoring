@@ -46,7 +46,7 @@ file (GLOB huggle_scoring_uixx
 )
 
 SET(huggle_scoring_SOURCES ${huggle_scoring_srcx})
-SET(huggle_scoring_FORMS ${huggle_scoring_uixx} "../../mainwindow.ui")
+SET(huggle_scoring_FORMS ${huggle_scoring_uixx})
 SET(huggle_scoring_RESOURCES ${huggle_scoring_resx})
 if(QT5_BUILD)
     QT5_WRAP_CPP(huggle_scoring_HEADERS_MOC ${huggle_scoring_HEADERS})

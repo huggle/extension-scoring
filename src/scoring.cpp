@@ -9,16 +9,15 @@
 //GNU General Public License for more details.
 
 #include "scoring.hpp"
-#include <wikiedit.hpp>
-//#include <wikiuser.hpp>
-#include <wikisite.hpp>
-#include <wikipage.hpp>
-#include <configuration.hpp>
-#include <querypool.hpp>
-#include <generic.hpp>
+#include <huggle_core/wikiedit.hpp>
+#include <huggle_core/wikisite.hpp>
+#include <huggle_core/wikipage.hpp>
+#include <huggle_core/configuration.hpp>
+#include <huggle_core/querypool.hpp>
+#include <huggle_core/generic.hpp>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <syslog.hpp>
+#include <huggle_core/syslog.hpp>
 #include <QTimer>
 
 #define SCORING_TIMEOUT this->GetConfig("timeout", "7")

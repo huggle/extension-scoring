@@ -12,9 +12,9 @@
 #define SCORING_HPP
 
 #define HUGGLE_EXTENSION
-#include <iextension.hpp>
-#include <collectable_smartptr.hpp>
-#include <webserverquery.hpp>
+#include <huggle_core/iextension.hpp>
+#include <huggle_core/collectable_smartptr.hpp>
+#include <huggle_core/webserverquery.hpp>
 #include <QAction>
 #include <QHash>
 
