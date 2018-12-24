@@ -100,7 +100,14 @@ void scoring::Hook_EditBeforePostProcessing(void *edit)
     WikiEdit->IncRef();
     Huggle::Collectable_SmartPtr<Huggle::WebserverQuery> query = new Huggle::WebserverQuery();
     query->Timeout = SCORING_TIMEOUT.toInt();
-    query->URL = this->GetServer(WikiEdit->GetSite()) + WikiEdit->GetSite()->Name + "?revids=" + QString::number(WikiEdit->RevID);
+	//Ugly, Im sure it can be done better...
+	if (WikiEdit->GetSite()->Name == 'wikidata') {
+		this->sitename = 'wikidatawiki';
+	}
+	else {
+		this->sitename = WikiEdit->GetSite()->Name;
+	}
+	query->URL = this->GetServer(WikiEdit->GetSite()) + this->sitename + "?revids=" + QString::number(WikiEdit->RevID);
     query->Process();
     Huggle::QueryPool::HugglePool->AppendQuery(query);
     this->Edits.insert(edit, query);
