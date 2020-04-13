@@ -53,6 +53,8 @@ void scoring::Hook_Shutdown()
 
 void scoring::Hook_MainWindowOnLoad(void *window)
 {
+    Q_UNUSED(window);
+
     // Let's get the configuration
     foreach (Huggle::WikiSite *x, hcfg->Projects)
     {
@@ -82,6 +84,7 @@ bool scoring::Hook_EditIsReady(void *edit)
 
 bool scoring::Hook_EditBeforeScore(void *edit)
 {
+    Q_UNUSED(edit);
     return true;
 }
 
@@ -109,7 +112,8 @@ void scoring::Hook_EditBeforePostProcessing(void *edit)
 
 void scoring::Hook_GoodEdit(void *edit)
 {
-
+    // todo
+    Q_UNUSED(edit);
 }
 
 double scoring::GetAmplifier(Huggle::WikiSite *site)
