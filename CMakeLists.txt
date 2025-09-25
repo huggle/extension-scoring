@@ -1,4 +1,6 @@
 # This is a build file for Huggle (used with cmake)
+cmake_minimum_required (VERSION 3.5)
+
 # You will need to update it by hand!
 cmake_minimum_required (VERSION 2.8.7)
 PROJECT(huggle_scoring)
